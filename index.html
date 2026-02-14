@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>متجر التطبيقات مع Firebase</title>
+<title>متجر التطبيقات مع Firebase Storage</title>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 <style>
 body { font-family: Arial; margin:0; padding:0; background:#f0f2f5; }
 header { background:#1e90ff; color:white; padding:15px; text-align:center; }
@@ -72,22 +73,23 @@ form { background:white; padding:15px; margin:15px; border-radius:8px; box-shado
 <script>
 // ==================== Firebase ======================
 const firebaseConfig = {
-  apiKey: "AIzaSyCtRKlBs3R5TvDMSHoqPzFPgtQ8i9FEWMg",
-  authDomain: "connectdz-69edd.firebaseapp.com",
-  projectId: "connectdz-69edd",
-  storageBucket: "connectdz-69edd.appspot.com",
-  messagingSenderId: "211254589080",
-  appId: "1:211254589080:web:c3256facc187314ac142ed"
+  apiKey: "AIzaSyAZR1ZFC0zaZOeyMH5baEDJZqVPLOLatp8",
+  authDomain: "studio-4353055608-666e6.firebaseapp.com",
+  projectId: "studio-4353055608-666e6",
+  storageBucket: "studio-4353055608-666e6.appspot.com",
+  messagingSenderId: "249229943359",
+  appId: "1:249229943359:web:edff2e7c577fb4dcb30e8a"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // ==================== الوظائف ======================
 const appList = document.getElementById('appList');
 const adminPanel = document.getElementById('adminPanel');
 let clickCount=0;
-let appImageBase64="";
-let appFileBase64="";
+let appImageFile = null;
+let appDownloadFile = null;
 
 // إظهار لوحة المطور بعد 5 نقرات
 document.getElementById('privacyBtn').addEventListener('click', ()=>{
@@ -95,47 +97,49 @@ document.getElementById('privacyBtn').addEventListener('click', ()=>{
   if(clickCount>=5) adminPanel.style.display='block';
 });
 
-// قراءة الصورة
+// قراءة الملفات
 document.getElementById('appImageFile').addEventListener('change', e=>{
-  const file=e.target.files[0];
-  const reader=new FileReader();
-  reader.onload=evt=>appImageBase64=evt.target.result;
-  reader.readAsDataURL(file);
+  appImageFile = e.target.files[0];
 });
-
-// قراءة الملف
 document.getElementById('appDownloadFile').addEventListener('change', e=>{
-  const file=e.target.files[0];
-  const reader=new FileReader();
-  reader.onload=evt=>appFileBase64=evt.target.result;
-  reader.readAsDataURL(file);
+  appDownloadFile = e.target.files[0];
 });
 
 // إضافة التطبيق
-adminPanel.addEventListener('submit', e=>{
+adminPanel.addEventListener('submit', async e=>{
   e.preventDefault();
   const name = document.getElementById('appName').value;
   const desc = document.getElementById('appDesc').value;
   const type = document.getElementById('appType').value;
   const service = document.getElementById('appService').value;
-  const downloadLink = document.getElementById('appDownloadLink').value;
+  const downloadLinkInput = document.getElementById('appDownloadLink').value;
 
-  if(!appImageBase64){ alert('اختر صورة للتطبيق'); return; }
-  if(!appFileBase64 && !downloadLink){ alert('اختر ملف التطبيق أو رابط خارجي'); return; }
+  if(!appImageFile){ alert('اختر صورة للتطبيق'); return; }
+  if(!appDownloadFile && !downloadLinkInput){ alert('اختر ملف التطبيق أو رابط خارجي'); return; }
 
-  db.collection("apps").add({
-    name,
-    desc,
-    type,
-    service,
-    img: appImageBase64,
-    download: appFileBase64 || null,
-    downloadLink: downloadLink || null,
+  // رفع الصورة إلى Firebase Storage
+  const imgRef = storage.ref().child(`images/${Date.now()}_${appImageFile.name}`);
+  const imgSnapshot = await imgRef.put(appImageFile);
+  const imgURL = await imgSnapshot.ref.getDownloadURL();
+
+  let fileURL = downloadLinkInput || null;
+  if(appDownloadFile){
+    const fileRef = storage.ref().child(`files/${Date.now()}_${appDownloadFile.name}`);
+    const fileSnapshot = await fileRef.put(appDownloadFile);
+    fileURL = await fileSnapshot.ref.getDownloadURL();
+  }
+
+  // حفظ التطبيق في Firestore
+  await db.collection("apps").add({
+    name, desc, type, service,
+    img: imgURL,
+    downloadLink: fileURL,
     comments: [],
     rating: 0
   });
+
   e.target.reset();
-  appImageBase64=""; appFileBase64="";
+  appImageFile=null; appDownloadFile=null;
 });
 
 // عرض التطبيقات
@@ -146,7 +150,7 @@ function displayApps(snapshot){
     const id = doc.id;
     const div=document.createElement('div');
     div.className='app-card';
-    const link = a.downloadLink ? a.downloadLink : a.download;
+    const link = a.downloadLink;
     div.innerHTML=`
       <img src="${a.img}" alt="${a.name}">
       <h3>${a.name} (${a.service})</h3>
@@ -162,7 +166,7 @@ function displayApps(snapshot){
   });
 }
 
-// التعليقات
+// إضافة تعليق
 function addComment(id){
   const input = document.getElementById(`commentInput${id}`);
   const comment = input.value.trim();
