@@ -3,202 +3,201 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HEX App Store</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<title>متجر التطبيقات مع Firebase</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 <style>
-body { background: linear-gradient(135deg, #0d0d0d, #1a1a1a); color: #fff; font-family: Arial, sans-serif; }
-.navbar, .footer { background: #111; }
-.card { background: #1c1c1c; color: #fff; border-radius: 10px; transition: 0.3s; }
-.card:hover { transform: scale(1.02); }
-.app-image { width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
-.download-btn { background-color: #28a745; color: #fff; }
-.section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.3s; }
-.section-box:hover { background: #444; transform: scale(1.05); }
-#appsContainer { margin-top: 20px; }
-#adminPanel { display: none; background: #333; padding: 20px; border-radius: 10px; margin-top: 20px; }
-.comment-box, .report-box { margin-top: 5px; }
-.star { color: gold; cursor: pointer; }
+body { font-family: Arial; margin:0; padding:0; background:#f0f2f5; }
+header { background:#1e90ff; color:white; padding:15px; text-align:center; }
+h1 { margin:0; font-size:28px; }
+nav { display:flex; flex-wrap:wrap; background:#0b5ed7; padding:10px; }
+nav button { margin:5px; padding:8px 12px; background:#1e90ff; border:none; color:white; cursor:pointer; border-radius:4px; }
+nav button:hover { background:#084298; }
+#search { width:95%; padding:10px; margin:10px auto; display:block; border-radius:5px; border:1px solid #ccc; }
+.app-container { display:grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap:15px; padding:15px; }
+.app-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; flex-direction:column; }
+.app-card img { width:100%; height:150px; object-fit:cover; border-radius:5px; margin-bottom:10px; }
+.app-card h3 { margin:5px 0; color:#1e90ff; }
+.app-card p { flex:1; font-size:14px; color:#333; }
+button { margin-top:10px; padding:8px; border:none; color:white; border-radius:4px; cursor:pointer; }
+.downloadBtn { background:#28a745; }
+.downloadBtn:hover { background:#1e7e34; }
+.commentBtn { background:#17a2b8; }
+.commentBtn:hover { background:#117a8b; }
+input[type=text] { width:100%; padding:5px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
+form { background:white; padding:15px; margin:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:none; }
 </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">HEX App Store</a>
-    <div class="d-flex">
-      <input id="searchInput" type="text" placeholder="بحث عن التطبيقات" class="form-control me-2">
-      <button onclick="searchApp()" class="btn btn-outline-light">بحث</button>
-    </div>
-  </div>
+<header><h1>متجر التطبيقات المتقدم</h1></header>
+
+<nav>
+<button onclick="filterApps('All')">الكل</button>
+<button onclick="filterApps('Android')">أندرويد</button>
+<button onclick="filterApps('Windows')">ويندوز</button>
 </nav>
 
-<div class="container mt-3">
-<div class="d-flex flex-wrap justify-content-start mb-3">
-  <div class="section-box" onclick="filterCategory('Android')">أندرويد</div>
-  <div class="section-box" onclick="filterCategory('Windows')">ويندوز</div>
-  <div class="section-box" onclick="filterCategory('الحماية')">الحماية</div>
-  <div class="section-box" onclick="filterCategory('التصوير الفوتوغرافي')">التصوير</div>
-  <div class="section-box" onclick="filterCategory('الصوت والفيديو')">الصوت والفيديو</div>
-  <div class="section-box" onclick="filterCategory('إنتاجية')">إنتاجية</div>
-  <div class="section-box" onclick="filterCategory('المحاكاة الافتراضية')">المحاكاة الافتراضية</div>
-  <div class="section-box" onclick="filterCategory('أدوات الألعاب')">أدوات الألعاب</div>
-  <div class="section-box" onclick="filterCategory('أدوات المطورين')">أدوات المطورين</div>
-  <div class="section-box" onclick="filterCategory('التواصل')">التواصل</div>
-  <div class="section-box" onclick="filterCategory('التخصيص')">التخصيص</div>
-  <div class="section-box" onclick="filterCategory('هندسة')">هندسة</div>
-  <div class="section-box" onclick="filterCategory('المرافق')">المرافق</div>
-  <div class="section-box" onclick="filterCategory('أنظمة التشغيل')">أنظمة التشغيل</div>
-</div>
+<input type="text" id="search" placeholder="ابحث عن تطبيق..." onkeyup="searchApps()">
 
-<div id="appsContainer" class="row mt-3"></div>
+<div class="app-container" id="appList"></div>
 
-<footer class="footer mt-5 p-3 text-center">
-  <p id="policyText" style="cursor:pointer;">سياسة الاستخدام</p>
-  <p>© 2026 HEX Store – All rights reserved | <a href="#">إخلاء المسؤولية</a></p>
+<!-- لوحة المطور -->
+<form id="adminPanel">
+<h2>لوحة المطور</h2>
+<input type="text" id="appName" placeholder="اسم التطبيق" required>
+<input type="text" id="appDesc" placeholder="وصف التطبيق" required>
+<select id="appType">
+<option value="Android">أندرويد</option>
+<option value="Windows">ويندوز</option>
+</select>
+<select id="appService">
+<option value="حماية">الحماية</option>
+<option value="إنتاجية">الإنتاجية</option>
+<option value="ألعاب">الألعاب</option>
+<option value="تصوير">التصوير</option>
+<option value="صوت وفيديو">الصوت والفيديو</option>
+</select>
+<input type="file" id="appImageFile" accept="image/*">
+<input type="file" id="appDownloadFile" accept=".exe,.apk,.zip,.iso">
+<input type="text" id="appDownloadLink" placeholder="أو رابط تنزيل خارجي">
+<button type="submit">إضافة التطبيق</button>
+</form>
+
+<footer id="privacyBtn">
+<p>© 2026 متجر التطبيقات – جميع الحقوق محفوظة</p>
+<p>سياسة الخصوصية | شروط الاستخدام</p>
 </footer>
 
-<div id="adminPanel">
-  <h4>لوحة المطور المخفية</h4>
-  <p>رفع تطبيق من حاسوبي أو رابط:</p>
-  <input type="file" id="appFile" class="form-control mb-2">
-  <input type="text" id="appLink" placeholder="رابط التطبيق (اختياري)" class="form-control mb-2">
-  <input type="text" id="appName" placeholder="اسم التطبيق" class="form-control mb-2">
-  <textarea id="appDesc" placeholder="وصف التطبيق" class="form-control mb-2"></textarea>
-  <input type="file" id="appImageFile" class="form-control mb-2"> <!-- رفع صورة -->
-  <input type="text" id="appVersion" placeholder="الإصدار" class="form-control mb-2">
-  <select id="appPlatform" class="form-control mb-2">
-    <option value="Android">Android</option>
-    <option value="Windows">Windows</option>
-  </select>
-  <select id="appCategory" class="form-control mb-2">
-    <option>الحماية</option><option>التصوير الفوتوغرافي</option>
-    <option>الصوت والفيديو</option><option>إنتاجية</option>
-    <option>المحاكاة الافتراضية</option><option>أدوات الألعاب</option>
-    <option>أدوات المطورين</option><option>التواصل</option>
-    <option>التخصيص</option><option>هندسة</option>
-    <option>المرافق</option><option>أنظمة التشغيل</option>
-  </select>
-  <button class="btn btn-success mb-2" onclick="addApp()">رفع التطبيق</button>
-  <hr>
-  <h5>التطبيقات المضافة</h5>
-  <div id="appList"></div>
-</div>
-
 <script>
-let apps = [];
-let clickCount = 0;
+// ==================== Firebase ======================
+const firebaseConfig = {
+  apiKey: "AIzaSyCtRKlBs3R5TvDMSHoqPzFPgtQ8i9FEWMg",
+  authDomain: "connectdz-69edd.firebaseapp.com",
+  projectId: "connectdz-69edd",
+  storageBucket: "connectdz-69edd.appspot.com",
+  messagingSenderId: "211254589080",
+  appId: "1:211254589080:web:c3256facc187314ac142ed"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// فتح لوحة المطور بعد 5 ضغطات
-document.getElementById("policyText").addEventListener("click", () => {
+// ==================== الوظائف ======================
+const appList = document.getElementById('appList');
+const adminPanel = document.getElementById('adminPanel');
+let clickCount=0;
+let appImageBase64="";
+let appFileBase64="";
+
+// إظهار لوحة المطور بعد 5 نقرات
+document.getElementById('privacyBtn').addEventListener('click', ()=>{
   clickCount++;
-  if(clickCount >=5) {
-    document.getElementById("adminPanel").style.display = "block";
-    alert("تم فتح لوحة المطور!");
-  }
+  if(clickCount>=5) adminPanel.style.display='block';
 });
 
-// إضافة تطبيق
-function addApp() {
-  let name = document.getElementById("appName").value;
-  let desc = document.getElementById("appDesc").value;
-  let link = document.getElementById("appLink").value;
-  let platform = document.getElementById("appPlatform").value;
-  let category = document.getElementById("appCategory").value;
-  let version = document.getElementById("appVersion").value;
-  let fileInput = document.getElementById("appFile");
-  let imageInput = document.getElementById("appImageFile");
+// قراءة الصورة
+document.getElementById('appImageFile').addEventListener('change', e=>{
+  const file=e.target.files[0];
+  const reader=new FileReader();
+  reader.onload=evt=>appImageBase64=evt.target.result;
+  reader.readAsDataURL(file);
+});
 
-  if(!name || !desc || (!link && !fileInput.files[0])) { alert("الرجاء تعبئة الحقول الأساسية أو رفع ملف"); return; }
+// قراءة الملف
+document.getElementById('appDownloadFile').addEventListener('change', e=>{
+  const file=e.target.files[0];
+  const reader=new FileReader();
+  reader.onload=evt=>appFileBase64=evt.target.result;
+  reader.readAsDataURL(file);
+});
 
-  // قراءة الصورة محليًا باستخدام FileReader
-  let imageURL = "";
-  if(imageInput.files[0]){
-    let reader = new FileReader();
-    reader.onload = function(e){
-      imageURL = e.target.result;
-      saveApp(name, desc, link, fileInput, imageURL, platform, category, version);
-    }
-    reader.readAsDataURL(imageInput.files[0]);
-  } else {
-    saveApp(name, desc, link, fileInput, "", platform, category, version);
-  }
-}
+// إضافة التطبيق
+adminPanel.addEventListener('submit', e=>{
+  e.preventDefault();
+  const name = document.getElementById('appName').value;
+  const desc = document.getElementById('appDesc').value;
+  const type = document.getElementById('appType').value;
+  const service = document.getElementById('appService').value;
+  const downloadLink = document.getElementById('appDownloadLink').value;
 
-function saveApp(name, desc, link, fileInput, imageURL, platform, category, version){
-  let fileURL = link;
-  if(fileInput.files[0] && !link){
-    fileURL = "#NOT_FOUND"; // المحاكاة
-  }
+  if(!appImageBase64){ alert('اختر صورة للتطبيق'); return; }
+  if(!appFileBase64 && !downloadLink){ alert('اختر ملف التطبيق أو رابط خارجي'); return; }
 
-  let app = {
-    name, desc, link: fileURL, image: imageURL, platform, category, version,
-    comments: [], rating:0,
-    id: "cdg1::" + Math.random().toString(36).substring(2,10) + "-" + Date.now()
-  };
-  apps.push(app);
-  renderApps();
-  renderAdminList();
-}
+  db.collection("apps").add({
+    name,
+    desc,
+    type,
+    service,
+    img: appImageBase64,
+    download: appFileBase64 || null,
+    downloadLink: downloadLink || null,
+    comments: [],
+    rating: 0
+  });
+  e.target.reset();
+  appImageBase64=""; appFileBase64="";
+});
 
 // عرض التطبيقات
-function renderApps(filter=null) {
-  let container = document.getElementById("appsContainer");
-  container.innerHTML = "";
-  let displayApps = filter ? apps.filter(a => a.category===filter || a.platform===filter) : apps;
-  
-  displayApps.forEach((app,index)=>{
-    let stars = "";
-    for(let i=1;i<=5;i++){
-      stars += `<span class="star" onclick="rateApp(${index},${i})">&#9733;</span>`;
-    }
-    let commentsHTML = app.comments.map(c=>`<div>${c}</div>`).join("");
-    container.innerHTML += `
-    <div class="col-md-3 mb-3">
-      <div class="card">
-        ${app.image?`<img src="${app.image}" class="app-image">`:""}
-        <div class="card-body">
-          <h5>${app.name}</h5>
-          <p>${app.desc}</p>
-          <p><strong>${app.platform}</strong> | ${app.category} | ${app.version}</p>
-          <p>بطاقة تعريف: ${app.id}</p>
-          <div>${stars}</div>
-          <a href="${app.link}" class="btn download-btn mt-2" target="_blank" onclick="checkLink('${app.link}')">تنزيل</a>
-          <div class="comment-box mt-2">
-            <input type="text" id="comment${index}" placeholder="تعليق..." class="form-control mb-1">
-            <button class="btn btn-sm btn-primary" onclick="addComment(${index})">أضف تعليق</button>
-          </div>
-          <div id="commentsList${index}">${commentsHTML}</div>
-          <button class="btn btn-sm btn-warning mt-1" onclick="reportApp(${index})">الإبلاغ عن التطبيق</button>
-        </div>
+function displayApps(snapshot){
+  appList.innerHTML="";
+  snapshot.forEach(doc=>{
+    const a = doc.data();
+    const id = doc.id;
+    const div=document.createElement('div');
+    div.className='app-card';
+    const link = a.downloadLink ? a.downloadLink : a.download;
+    div.innerHTML=`
+      <img src="${a.img}" alt="${a.name}">
+      <h3>${a.name} (${a.service})</h3>
+      <p>${a.desc}</p>
+      <a href="${link}" download="${a.name}"><button class="downloadBtn">تحميل</button></a>
+      <div>
+        <input type="text" id="commentInput${id}" placeholder="اكتب تعليقك هنا">
+        <button class="commentBtn" onclick="addComment('${id}')">أضف تعليق</button>
       </div>
-    </div>
+      <div id="comments${id}">${(a.comments||[]).map(c=>'<p>'+c+'</p>').join('')}</div>
     `;
+    appList.appendChild(div);
   });
 }
 
-function checkLink(link){ if(link === "#NOT_FOUND"){ alert("غير موجود\nشفرة: NOT_FOUND"); } }
-function addComment(index){ let commentInput = document.getElementById(`comment${index}`); let text = commentInput.value.trim(); if(text){ apps[index].comments.push(text); renderApps(); } }
-function rateApp(index, stars){ apps[index].rating = stars; renderApps(); }
-function reportApp(index){ alert("تم إرسال البلاغ!"); }
+// التعليقات
+function addComment(id){
+  const input = document.getElementById(`commentInput${id}`);
+  const comment = input.value.trim();
+  if(comment==="") return;
+  const docRef = db.collection("apps").doc(id);
+  docRef.get().then(doc=>{
+    const comments = doc.data().comments || [];
+    comments.push(comment);
+    docRef.update({comments});
+  });
+  input.value="";
+}
 
-function renderAdminList(){
-  let container = document.getElementById("appList");
-  container.innerHTML = "";
-  apps.forEach((app,index)=>{
-    container.innerHTML += `
-      <div class="border p-2 mb-2">
-        <b>${app.name}</b> (${app.platform} | ${app.category} | ${app.version})
-        <button class="btn btn-sm btn-danger float-end" onclick="deleteApp(${index})">حذف</button>
-      </div>
-    `;
+// متابعة أي تغييرات في Firebase
+db.collection("apps").onSnapshot(snapshot=>{
+  displayApps(snapshot);
+});
+
+// البحث
+function searchApps(){
+  const keyword=document.getElementById('search').value.toLowerCase();
+  db.collection("apps").get().then(snapshot=>{
+    const filtered = snapshot.docs.filter(doc=>{
+      const a = doc.data();
+      return a.name.toLowerCase().includes(keyword) || a.desc.toLowerCase().includes(keyword);
+    });
+    displayApps({forEach: f => filtered.forEach(f)});
   });
 }
 
-function deleteApp(index){ apps.splice(index,1); renderApps(); renderAdminList(); }
-function filterCategory(category){ renderApps(category); }
-function searchApp(){ let query = document.getElementById("searchInput").value.trim().toLowerCase(); if(query==="hex app store"){ window.location.href = window.location.origin; } else{ alert("لم يتم العثور على التطبيق"); } }
-
-renderApps();
+// تصفية الأقسام
+function filterApps(type){
+  if(type==='All') db.collection("apps").get().then(snapshot=>displayApps(snapshot));
+  else db.collection("apps").where("type","==",type).get().then(snapshot=>displayApps(snapshot));
+}
 </script>
 
 </body>
