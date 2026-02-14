@@ -33,7 +33,6 @@ body { background: linear-gradient(135deg, #0d0d0d, #1a1a1a); color: #fff; font-
 </nav>
 
 <div class="container mt-3">
-<!-- الأقسام العليا -->
 <div class="d-flex flex-wrap justify-content-start mb-3">
   <div class="section-box" onclick="filterCategory('Android')">أندرويد</div>
   <div class="section-box" onclick="filterCategory('Windows')">ويندوز</div>
@@ -51,24 +50,21 @@ body { background: linear-gradient(135deg, #0d0d0d, #1a1a1a); color: #fff; font-
   <div class="section-box" onclick="filterCategory('أنظمة التشغيل')">أنظمة التشغيل</div>
 </div>
 
-<!-- قسم التطبيقات -->
 <div id="appsContainer" class="row mt-3"></div>
 
-<!-- Footer -->
 <footer class="footer mt-5 p-3 text-center">
   <p id="policyText" style="cursor:pointer;">سياسة الاستخدام</p>
   <p>© 2026 HEX Store – All rights reserved | <a href="#">إخلاء المسؤولية</a></p>
 </footer>
 
-<!-- لوحة المطور المخفية -->
 <div id="adminPanel">
   <h4>لوحة المطور المخفية</h4>
-  <p>إضافة/تعديل/حذف التطبيقات وإدارة البلاغات:</p>
+  <p>رفع تطبيق من حاسوبي أو رابط:</p>
   <input type="file" id="appFile" class="form-control mb-2">
   <input type="text" id="appLink" placeholder="رابط التطبيق (اختياري)" class="form-control mb-2">
   <input type="text" id="appName" placeholder="اسم التطبيق" class="form-control mb-2">
   <textarea id="appDesc" placeholder="وصف التطبيق" class="form-control mb-2"></textarea>
-  <input type="text" id="appImage" placeholder="رابط صورة التطبيق (اختياري)" class="form-control mb-2">
+  <input type="file" id="appImageFile" class="form-control mb-2"> <!-- رفع صورة -->
   <input type="text" id="appVersion" placeholder="الإصدار" class="form-control mb-2">
   <select id="appPlatform" class="form-control mb-2">
     <option value="Android">Android</option>
@@ -86,14 +82,10 @@ body { background: linear-gradient(135deg, #0d0d0d, #1a1a1a); color: #fff; font-
   <hr>
   <h5>التطبيقات المضافة</h5>
   <div id="appList"></div>
-  <hr>
-  <h5>البلاغات</h5>
-  <div id="reportsList"></div>
 </div>
 
 <script>
 let apps = [];
-let reports = [];
 let clickCount = 0;
 
 // فتح لوحة المطور بعد 5 ضغطات
@@ -110,30 +102,37 @@ function addApp() {
   let name = document.getElementById("appName").value;
   let desc = document.getElementById("appDesc").value;
   let link = document.getElementById("appLink").value;
-  let image = document.getElementById("appImage").value;
   let platform = document.getElementById("appPlatform").value;
   let category = document.getElementById("appCategory").value;
   let version = document.getElementById("appVersion").value;
   let fileInput = document.getElementById("appFile");
+  let imageInput = document.getElementById("appImageFile");
 
   if(!name || !desc || (!link && !fileInput.files[0])) { alert("الرجاء تعبئة الحقول الأساسية أو رفع ملف"); return; }
 
-  // إنشاء "رابط وهمي" للملف المحلي
+  // قراءة الصورة محليًا باستخدام FileReader
+  let imageURL = "";
+  if(imageInput.files[0]){
+    let reader = new FileReader();
+    reader.onload = function(e){
+      imageURL = e.target.result;
+      saveApp(name, desc, link, fileInput, imageURL, platform, category, version);
+    }
+    reader.readAsDataURL(imageInput.files[0]);
+  } else {
+    saveApp(name, desc, link, fileInput, "", platform, category, version);
+  }
+}
+
+function saveApp(name, desc, link, fileInput, imageURL, platform, category, version){
   let fileURL = link;
-  if(fileInput.files[0]){
-    fileURL = "#NOT_FOUND"; // المحاكاة لأن الملف محلي لا يمكن تنزيله مباشرة
+  if(fileInput.files[0] && !link){
+    fileURL = "#NOT_FOUND"; // المحاكاة
   }
 
   let app = {
-    name,
-    desc,
-    link: fileURL,
-    image,
-    platform,
-    category,
-    version,
-    comments: [],
-    rating:0,
+    name, desc, link: fileURL, image: imageURL, platform, category, version,
+    comments: [], rating:0,
     id: "cdg1::" + Math.random().toString(36).substring(2,10) + "-" + Date.now()
   };
   apps.push(app);
@@ -177,47 +176,11 @@ function renderApps(filter=null) {
   });
 }
 
-// التحقق من الرابط
-function checkLink(link){
-  if(link === "#NOT_FOUND"){
-    alert("غير موجود\nشفرة: NOT_FOUND");
-  }
-}
+function checkLink(link){ if(link === "#NOT_FOUND"){ alert("غير موجود\nشفرة: NOT_FOUND"); } }
+function addComment(index){ let commentInput = document.getElementById(`comment${index}`); let text = commentInput.value.trim(); if(text){ apps[index].comments.push(text); renderApps(); } }
+function rateApp(index, stars){ apps[index].rating = stars; renderApps(); }
+function reportApp(index){ alert("تم إرسال البلاغ!"); }
 
-// التعليقات
-function addComment(index){
-  let commentInput = document.getElementById(`comment${index}`);
-  let text = commentInput.value.trim();
-  if(text) {
-    apps[index].comments.push(text);
-    renderApps();
-  }
-}
-
-// التقييم
-function rateApp(index, stars){
-  apps[index].rating = stars;
-  renderApps();
-}
-
-// الإبلاغ
-function reportApp(index){
-  let app = apps[index];
-  reports.push({name: app.name, platform: app.platform, category: app.category});
-  alert("تم إرسال البلاغ!");
-  renderReports();
-}
-
-// عرض البلاغات في لوحة المطور
-function renderReports(){
-  let container = document.getElementById("reportsList");
-  container.innerHTML = "";
-  reports.forEach((r,i)=>{
-    container.innerHTML += `<div class="border p-2 mb-2">#${i+1} ${r.name} (${r.platform} | ${r.category})</div>`;
-  });
-}
-
-// قائمة التطبيقات في لوحة المطور
 function renderAdminList(){
   let container = document.getElementById("appList");
   container.innerHTML = "";
@@ -231,25 +194,9 @@ function renderAdminList(){
   });
 }
 
-// حذف تطبيق
-function deleteApp(index){
-  apps.splice(index,1);
-  renderApps();
-  renderAdminList();
-  renderReports();
-}
-
-// تصفية
-function filterCategory(category){
-  renderApps(category);
-}
-
-// البحث
-function searchApp(){
-  let query = document.getElementById("searchInput").value.trim().toLowerCase();
-  if(query === "hex app store"){ window.location.href = window.location.origin; }
-  else{ alert("لم يتم العثور على التطبيق"); }
-}
+function deleteApp(index){ apps.splice(index,1); renderApps(); renderAdminList(); }
+function filterCategory(category){ renderApps(category); }
+function searchApp(){ let query = document.getElementById("searchInput").value.trim().toLowerCase(); if(query==="hex app store"){ window.location.href = window.location.origin; } else{ alert("لم يتم العثور على التطبيق"); } }
 
 renderApps();
 </script>
