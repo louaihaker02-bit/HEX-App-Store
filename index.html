@@ -2,272 +2,182 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HEX App Store</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <style>
-body { font-family:sans-serif; background:#f5f6f8; }
-.navbar-brand { font-weight:bold; font-size:22px; cursor:pointer; }
-.card { border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.08); margin-bottom:15px; cursor:pointer;}
-.app-image { width:100%; max-height:150px; object-fit:cover; border-radius:10px;}
-.section-cards { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
-.section-cards .card { flex:1 1 150px; text-align:center; padding:15px; background:#fff; border-radius:10px; cursor:pointer; transition:all .2s; }
-.section-cards .card:hover { transform:scale(1.05); box-shadow:0 4px 12px rgba(0,0,0,.2);}
-.btn-download { background:green; color:#fff; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; }
-.btn-download:hover { opacity:0.9; }
-#adminPanel,#uploadModal,#appDetail { display:none; background:#fff; border:2px solid #000; padding:20px; margin:20px 0; border-radius:10px; }
-.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); justify-content:center; align-items:center; }
-.modal-dialog { background:#fff; padding:20px; border-radius:10px; width:100%; max-width:500px; }
-footer a { display:block; color:#fff; text-decoration:none; margin-bottom:5px; }
-footer a:hover { text-decoration:underline; }
+body { background: #111; color: #fff; }
+.navbar, .footer { background: #222; }
+.card { background: #1a1a1a; color: #fff; }
+.app-image { width: 100%; height: 150px; object-fit: cover; }
+#adminPanel, #loginModal { display: none; background: #333; padding: 20px; margin-bottom: 20px; border-radius: 10px; }
+.download-btn { background-color: #28a745; color: #fff; }
+.section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; }
+.section-box:hover { background: #444; }
 </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark bg-dark p-3">
-<div class="container d-flex justify-content-between align-items-center">
-<a class="navbar-brand" id="brandLogo">HEX App Store</a>
-<div>
-<input id="searchInput" type="text" placeholder="بحث عن التطبيقات" class="form-control d-inline-block me-2">
-<button onclick="searchApp()" class="btn btn-outline-light">بحث</button>
-</div>
-<div>
-<button class="btn btn-success btn-sm" onclick="filterSystem('android')">Android</button>
-<button class="btn btn-primary btn-sm" onclick="filterSystem('windows')">Windows</button>
-<button class="btn btn-warning btn-sm" onclick="showUploadModal()">رفع تطبيق</button>
-</div>
-</div>
+<nav class="navbar navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">HEX App Store</a>
+    <div class="d-flex">
+      <input id="searchInput" type="text" placeholder="بحث عن التطبيقات" class="form-control me-2">
+      <button onclick="searchApp()" class="btn btn-outline-light">بحث</button>
+    </div>
+  </div>
 </nav>
 
-<div class="container mt-4">
-<!-- أقسام التطبيقات -->
-<div class="section-cards" id="categoryCards"></div>
+<div class="container mt-3">
 
-<h4>📢 التطبيقات المروّجة</h4>
-<div class="row" id="promotedApps"></div>
-<hr>
-<h4>جميع التطبيقات</h4>
-<div id="categoriesContainer"></div>
+<!-- الأقسام العليا -->
+<div class="d-flex flex-wrap justify-content-start mb-3">
+  <div class="section-box" onclick="filterCategory('Android')">أندرويد</div>
+  <div class="section-box" onclick="filterCategory('Windows')">ويندوز</div>
+  <div class="section-box" onclick="filterCategory('الحماية')">الحماية</div>
+  <div class="section-box" onclick="filterCategory('التصوير الفوتوغرافي')">التصوير</div>
+  <div class="section-box" onclick="filterCategory('الصوت والفيديو')">الصوت والفيديو</div>
+  <div class="section-box" onclick="filterCategory('إنتاجية')">إنتاجية</div>
+  <div class="section-box" onclick="filterCategory('المحاكاة الافتراضية')">المحاكاة الافتراضية</div>
+  <div class="section-box" onclick="filterCategory('أدوات الألعاب')">أدوات الألعاب</div>
+  <div class="section-box" onclick="filterCategory('أدوات المطورين')">أدوات المطورين</div>
+  <div class="section-box" onclick="filterCategory('التواصل')">التواصل</div>
+  <div class="section-box" onclick="filterCategory('التخصيص')">التخصيص</div>
+  <div class="section-box" onclick="filterCategory('هندسة')">هندسة</div>
+  <div class="section-box" onclick="filterCategory('المرافق')">المرافق</div>
+  <div class="section-box" onclick="filterCategory('أنظمة التشغيل')">أنظمة التشغيل</div>
+</div>
 
-<!-- تفاصيل التطبيق -->
-<div id="appDetail">
-<button class="btn btn-sm btn-secondary mb-2" onclick="closeAppDetail()">رجوع</button>
-<div id="appDetailContent"></div>
+<!-- قسم التطبيقات -->
+<div id="appsContainer" class="row mt-3"></div>
+
+<!-- زر نشر تطبيق أسفل الموقع -->
+<div class="text-center mt-5">
+  <button class="btn btn-warning" onclick="showLoginModal()">أنشر تطبيقك</button>
+</div>
+
+<!-- نموذج تسجيل الدخول للمطور -->
+<div id="loginModal">
+  <h4>تسجيل دخول المطور</h4>
+  <input type="text" id="username" placeholder="اسم المستخدم" class="form-control mb-2">
+  <input type="password" id="password" placeholder="كلمة المرور" class="form-control mb-2">
+  <button class="btn btn-success" onclick="loginDeveloper()">دخول</button>
+  <button class="btn btn-secondary" onclick="closeLoginModal()">إلغاء</button>
 </div>
 
 <!-- لوحة المطور المخفية -->
 <div id="adminPanel">
-<h4>لوحة المطور المخفية</h4>
-<h5>التطبيقات المعلقة</h5>
-<div id="pendingApps"></div>
-<hr>
-<h5>إضافة تطبيق يدوي</h5>
-<form id="adminAddForm">
-<div class="mb-3"><label>اسم التطبيق</label><input type="text" class="form-control" id="adminAppName" required></div>
-<div class="mb-3"><label>الوصف</label><textarea class="form-control" id="adminAppDesc" required></textarea></div>
-<div class="mb-3"><label>النظام</label>
-<select class="form-control" id="adminAppSystem">
-<option value="android">Android</option>
-<option value="windows">Windows</option>
-</select></div>
-<div class="mb-3"><label>التصنيف</label>
-<select class="form-control" id="adminAppCategory">
-<option value="الحماية">الحماية</option>
-<option value="التصوير الفوتوغرافي">التصوير الفوتوغرافي</option>
-<option value="الصوت والفيديو">الصوت والفيديو</option>
-<option value="إنتاجية">إنتاجية</option>
-<option value="المحاكاة الافتراضية">المحاكاة الافتراضية</option>
-<option value="أدوات الألعاب">أدوات الألعاب</option>
-<option value="أدوات المطورين">أدوات المطورين</option>
-<option value="التواصل">التواصل</option>
-<option value="التخصيص">التخصيص</option>
-<option value="هندسة">هندسة</option>
-<option value="المرافق">المرافق</option>
-<option value="أنظمة التشغيل">أنظمة التشغيل</option>
-</select></div>
-<div class="mb-3"><label>رابط التطبيق أو ملف</label><input type="text" class="form-control" id="adminAppLink"></div>
-<div class="mb-3"><label>صورة التطبيق</label><input type="file" class="form-control" id="adminAppImage"></div>
-<button type="submit" class="btn btn-primary">إضافة التطبيق</button>
-</form>
-</div>
-
-<!-- Upload Modal -->
-<div class="modal" id="uploadModal">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">رفع تطبيق جديد</h5>
-<button type="button" class="btn-close" onclick="closeUploadModal()"></button>
-</div>
-<div class="modal-body">
-<form id="uploadForm">
-<div class="mb-3">
-<label>اسم التطبيق</label>
-<input type="text" class="form-control" id="appName" required>
-</div>
-<div class="mb-3">
-<label>الوصف</label>
-<textarea class="form-control" id="appDesc" required></textarea>
-</div>
-<div class="mb-3">
-<label>النظام</label>
-<select class="form-control" id="appSystem">
-<option value="android">Android</option>
-<option value="windows">Windows</option>
-</select>
-</div>
-<div class="mb-3">
-<label>التصنيف</label>
-<select class="form-control" id="appCategory">
-<option value="الحماية">الحماية</option>
-<option value="التصوير الفوتوغرافي">التصوير الفوتوغرافي</option>
-<option value="الصوت والفيديو">الصوت والفيديو</option>
-<option value="إنتاجية">إنتاجية</option>
-<option value="المحاكاة الافتراضية">المحاكاة الافتراضية</option>
-<option value="أدوات الألعاب">أدوات الألعاب</option>
-<option value="أدوات المطورين">أدوات المطورين</option>
-<option value="التواصل">التواصل</option>
-<option value="التخصيص">التخصيص</option>
-<option value="هندسة">هندسة</option>
-<option value="المرافق">المرافق</option>
-<option value="أنظمة التشغيل">أنظمة التشغيل</option>
-</select>
-</div>
-<div class="mb-3">
-<label>رفع ملف التطبيق (اختياري)</label>
-<input type="file" class="form-control" id="appFile">
-</div>
-<div class="mb-3">
-<label>أو رابط التطبيق (اختياري)</label>
-<input type="url" class="form-control" id="appLink">
-</div>
-<div class="mb-3">
-<label>صورة للتطبيق (اختياري)</label>
-<input type="file" class="form-control" id="appImage">
-</div>
-<button type="submit" class="btn btn-primary">رفع التطبيق</button>
-</form>
-</div>
-</div>
-</div>
+  <h4>لوحة المطور المخفية</h4>
+  <p>إضافة تطبيق جديد:</p>
+  <input type="text" id="appName" placeholder="اسم التطبيق" class="form-control mb-2">
+  <textarea id="appDesc" placeholder="وصف التطبيق" class="form-control mb-2"></textarea>
+  <input type="text" id="appLink" placeholder="رابط التطبيق أو اسم الملف" class="form-control mb-2">
+  <input type="text" id="appImage" placeholder="رابط صورة التطبيق (اختياري)" class="form-control mb-2">
+  <select id="appPlatform" class="form-control mb-2">
+    <option value="Android">Android</option>
+    <option value="Windows">Windows</option>
+  </select>
+  <select id="appCategory" class="form-control mb-2">
+    <option>الحماية</option><option>التصوير الفوتوغرافي</option>
+    <option>الصوت والفيديو</option><option>إنتاجية</option>
+    <option>المحاكاة الافتراضية</option><option>أدوات الألعاب</option>
+    <option>أدوات المطورين</option><option>التواصل</option>
+    <option>التخصيص</option><option>هندسة</option>
+    <option>المرافق</option><option>أنظمة التشغيل</option>
+  </select>
+  <button class="btn btn-success" onclick="addApp()">رفع التطبيق</button>
 </div>
 
 <!-- Footer -->
-<footer class="bg-dark text-light text-center p-5 mt-5">
-<div class="container">
-<h5>تواصل معنا: <a href="mailto:hker@hex.net" style="color:#fff;">hker@hex.net</a></h5>
-<hr style="border-top:1px solid #777;">
-<div class="row text-start">
-<div class="col-md-4 mb-3">
-<h6>القانوني</h6>
-<a href="#">سياسة الاستخدام</a>
-<a href="#">الخصوصية</a>
-<a href="#">إخلاء المسؤولية</a>
-</div>
-<div class="col-md-4 mb-3">
-<h6>التطبيقات</h6>
-<a href="#">نشر تطبيق</a>
-<a href="#">ترويج تطبيق</a>
-<a href="#">إعلانات الموقع</a>
-</div>
-<div class="col-md-4 mb-3">
-<h6>اكتشفنا</h6>
-<a href="#">من نحن</a>
-<a href="#">خدماتنا</a>
-<a href="#">الأسئلة الشائعة</a>
-</div>
-</div>
-<hr style="border-top:1px solid #777;">
-<p>© 2026 HEX Store – جميع الحقوق محفوظة</p>
-</div>
+<footer class="footer mt-5 p-3">
+  <div class="container text-center">
+    <p>© 2026 HEX Store – All rights reserved | <a href="#">سياسة الاستخدام</a> | <a href="#">إخلاء المسؤولية</a></p>
+  </div>
 </footer>
 
 <script>
-// البيانات
-let apps=[], pendingApps=[];
-const categories=["الحماية","التصوير الفوتوغرافي","الصوت والفيديو","إنتاجية","المحاكاة الافتراضية","أدوات الألعاب","أدوات المطورين","التواصل","التخصيص","هندسة","المرافق","أنظمة التشغيل"];
+let apps = []; // مصفوفة تخزين التطبيقات
 
-// Render أقسام
-function renderCategoryCards(){
-  let container=document.getElementById("categoryCards"); container.innerHTML="";
-  categories.forEach(cat=>{ container.innerHTML+=`<div class="card" onclick="filterCategory('${cat}')">${cat}</div>`; });
+// عرض لوحة تسجيل الدخول
+function showLoginModal() {
+  document.getElementById("loginModal").style.display = "block";
+}
+
+// إخفاء تسجيل الدخول
+function closeLoginModal() {
+  document.getElementById("loginModal").style.display = "none";
+}
+
+// تسجيل دخول المطور
+function loginDeveloper() {
+  let user = document.getElementById("username").value;
+  let pass = document.getElementById("password").value;
+  if(user === "23" && pass === "23"){
+    document.getElementById("loginModal").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    alert("تم تسجيل الدخول! لوحة المطور جاهزة");
+  } else {
+    alert("اسم المستخدم أو كلمة المرور خاطئة");
+  }
+}
+
+// إضافة تطبيق جديد
+function addApp() {
+  let name = document.getElementById("appName").value;
+  let desc = document.getElementById("appDesc").value;
+  let link = document.getElementById("appLink").value;
+  let image = document.getElementById("appImage").value;
+  let platform = document.getElementById("appPlatform").value;
+  let category = document.getElementById("appCategory").value;
+
+  if(!name || !desc || !link) { alert("الرجاء تعبئة جميع الحقول الأساسية"); return; }
+
+  apps.push({name, desc, link, image, platform, category});
+  alert("تم إضافة التطبيق وسيظهر فورًا");
+  renderApps();
 }
 
 // عرض التطبيقات
-function renderApps(){  
-  let catContainer=document.getElementById("categoriesContainer");
-  catContainer.innerHTML="";
-  categories.forEach(cat=>{
-    let catApps=apps.filter(a=>a.category===cat && a.approved);
-    if(catApps.length>0){
-      catContainer.innerHTML+=`<h5 class="mt-3">${cat}</h5><div class="row" id="cat-${cat}"></div>`;
-      catApps.forEach(a=>{
-        document.getElementById(`cat-${cat}`).innerHTML+=`
-        <div class="col-md-4"><div class="card">
-        ${a.img?`<img src="${a.img}" class="app-image">`:''}
-        <div class="card-body"><h5>${a.name}</h5><p>${a.desc}</p>
-        <button class="btn-download" onclick="downloadApp('${a.link? a.link : '#'}')">تنزيل</button></div></div></div>`;  
-      });
-    }
+function renderApps(filter=null) {
+  let container = document.getElementById("appsContainer");
+  container.innerHTML = "";
+  let displayApps = filter ? apps.filter(a => a.category === filter || a.platform === filter) : apps;
+
+  displayApps.forEach(app => {
+    container.innerHTML += `
+      <div class="col-md-3 mb-3">
+        <div class="card">
+          ${app.image ? `<img src="${app.image}" class="app-image">` : ""}
+          <div class="card-body">
+            <h5>${app.name}</h5>
+            <p>${app.desc}</p>
+            <p><strong>${app.platform}</strong> | ${app.category}</p>
+            <a href="${app.link}" class="btn download-btn" target="_blank">تنزيل</a>
+          </div>
+        </div>
+      </div>
+    `;
   });
 }
 
-// فلترة حسب القسم
-function filterCategory(cat){ 
-  let container=document.getElementById("categoriesContainer"); container.innerHTML="";
-  let catApps=apps.filter(a=>a.category===cat && a.approved);
-  if(catApps.length>0){
-    container.innerHTML+=`<h5 class="mt-3">${cat}</h5><div class="row" id="cat-${cat}"></div>`;
-    catApps.forEach(a=>{ document.getElementById(`cat-${cat}`).innerHTML+=`
-      <div class="col-md-4"><div class="card">
-      ${a.img?`<img src="${a.img}" class="app-image">`:''}
-      <div class="card-body"><h5>${a.name}</h5><p>${a.desc}</p>
-      <button class="btn-download" onclick="downloadApp('${a.link? a.link:'#'}')">تنزيل</button></div></div></div>`; });
-  } else alert("لا يوجد تطبيقات في هذا القسم");
+// تصفية حسب الفئة
+function filterCategory(category) {
+  renderApps(category);
 }
 
-// تحميل التطبيق
-function downloadApp(link){ window.open(link,'_blank'); }
-
-// رفع تطبيق
-function showUploadModal(){ document.getElementById("uploadModal").style.display="flex"; }
-function closeUploadModal(){ document.getElementById("uploadModal").style.display="none"; }
-
-document.getElementById("uploadForm").addEventListener("submit",function(e){
-e.preventDefault();
-let name=document.getElementById("appName").value;
-let desc=document.getElementById("appDesc").value;
-let system=document.getElementById("appSystem").value;
-let category=document.getElementById("appCategory").value;
-let link=document.getElementById("appLink").value;
-let imgInput=document.getElementById("appImage");
-let img=imgInput.files[0]? URL.createObjectURL(imgInput.files[0]):'';
-pendingApps.push({name,desc,system,category,link,img,approved:false});
-alert("تم إرسال التطبيق للمراجعة");
-closeUploadModal();
-renderPendingApps();
-});
-
-// لوحة المطور
-function renderPendingApps(){
-  let container=document.getElementById("pendingApps"); container.innerHTML="";
-  pendingApps.forEach((a,idx)=>{
-    container.innerHTML+=`<div class="card mb-2 p-2">
-    <h5>${a.name}</h5><p>${a.desc}</p>
-    <button class="btn btn-success btn-sm" onclick="approve(${idx})">موافقة</button>
-    <button class="btn btn-danger btn-sm" onclick="reject(${idx})">رفض</button>
-    </div>`;
-  });
+// بحث التطبيق
+function searchApp() {
+  let query = document.getElementById("searchInput").value.trim().toLowerCase();
+  if(query === "hex app store") {
+    window.location.href = window.location.origin;
+  } else {
+    alert("لم يتم العثور على التطبيق");
+  }
 }
 
-function approve(idx){ 
-  pendingApps[idx].approved=true; apps.push(pendingApps[idx]); pendingApps.splice(idx,1); 
-  renderPendingApps(); renderApps();
-}
-function reject(idx){ pendingApps.splice(idx,1); renderPendingApps(); }
-
-renderCategoryCards();
+// عرض كل التطبيقات افتراضياً
 renderApps();
 </script>
+
 </body>
 </html>
