@@ -6,9 +6,10 @@
 <title>HEX App Store</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <style>
-body { background: #111; color: #fff; font-family: Arial, sans-serif; }
-.navbar, .footer { background: #222; }
-.card { background: #1a1a1a; color: #fff; border-radius: 10px; }
+body { background: linear-gradient(135deg, #0d0d0d, #1a1a1a); color: #fff; font-family: Arial, sans-serif; }
+.navbar, .footer { background: #111; }
+.card { background: #1c1c1c; color: #fff; border-radius: 10px; transition: 0.3s; }
+.card:hover { transform: scale(1.02); }
 .app-image { width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
 .download-btn { background-color: #28a745; color: #fff; }
 .section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.3s; }
@@ -117,8 +118,24 @@ function addApp() {
 
   if(!name || !desc || (!link && !fileInput.files[0])) { alert("الرجاء تعبئة الحقول الأساسية أو رفع ملف"); return; }
 
-  let fileName = fileInput.files[0] ? fileInput.files[0].name : null;
-  let app = {name, desc, link:fileName || link, image, platform, category, version, comments: [], rating:0};
+  // إنشاء "رابط وهمي" للملف المحلي
+  let fileURL = link;
+  if(fileInput.files[0]){
+    fileURL = "#NOT_FOUND"; // المحاكاة لأن الملف محلي لا يمكن تنزيله مباشرة
+  }
+
+  let app = {
+    name,
+    desc,
+    link: fileURL,
+    image,
+    platform,
+    category,
+    version,
+    comments: [],
+    rating:0,
+    id: "cdg1::" + Math.random().toString(36).substring(2,10) + "-" + Date.now()
+  };
   apps.push(app);
   renderApps();
   renderAdminList();
@@ -144,8 +161,9 @@ function renderApps(filter=null) {
           <h5>${app.name}</h5>
           <p>${app.desc}</p>
           <p><strong>${app.platform}</strong> | ${app.category} | ${app.version}</p>
+          <p>بطاقة تعريف: ${app.id}</p>
           <div>${stars}</div>
-          <a href="${app.link}" class="btn download-btn mt-2" target="_blank">تنزيل</a>
+          <a href="${app.link}" class="btn download-btn mt-2" target="_blank" onclick="checkLink('${app.link}')">تنزيل</a>
           <div class="comment-box mt-2">
             <input type="text" id="comment${index}" placeholder="تعليق..." class="form-control mb-1">
             <button class="btn btn-sm btn-primary" onclick="addComment(${index})">أضف تعليق</button>
@@ -157,6 +175,13 @@ function renderApps(filter=null) {
     </div>
     `;
   });
+}
+
+// التحقق من الرابط
+function checkLink(link){
+  if(link === "#NOT_FOUND"){
+    alert("غير موجود\nشفرة: NOT_FOUND");
+  }
 }
 
 // التعليقات
