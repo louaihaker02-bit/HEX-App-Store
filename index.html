@@ -10,10 +10,11 @@ body { background: #111; color: #fff; }
 .navbar, .footer { background: #222; }
 .card { background: #1a1a1a; color: #fff; }
 .app-image { width: 100%; height: 150px; object-fit: cover; }
-#adminPanel, #loginModal { display: none; background: #333; padding: 20px; margin-bottom: 20px; border-radius: 10px; }
 .download-btn { background-color: #28a745; color: #fff; }
 .section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; }
 .section-box:hover { background: #444; }
+#appsContainer { margin-top: 20px; }
+#adminPanel { display: none; background: #333; padding: 20px; border-radius: 10px; margin-top: 20px; }
 </style>
 </head>
 <body>
@@ -29,7 +30,6 @@ body { background: #111; color: #fff; }
 </nav>
 
 <div class="container mt-3">
-
 <!-- الأقسام العليا -->
 <div class="d-flex flex-wrap justify-content-start mb-3">
   <div class="section-box" onclick="filterCategory('Android')">أندرويد</div>
@@ -51,28 +51,21 @@ body { background: #111; color: #fff; }
 <!-- قسم التطبيقات -->
 <div id="appsContainer" class="row mt-3"></div>
 
-<!-- زر نشر تطبيق أسفل الموقع -->
-<div class="text-center mt-5">
-  <button class="btn btn-warning" onclick="showLoginModal()">أنشر تطبيقك</button>
-</div>
-
-<!-- نموذج تسجيل الدخول للمطور -->
-<div id="loginModal">
-  <h4>تسجيل دخول المطور</h4>
-  <input type="text" id="username" placeholder="اسم المستخدم" class="form-control mb-2">
-  <input type="password" id="password" placeholder="كلمة المرور" class="form-control mb-2">
-  <button class="btn btn-success" onclick="loginDeveloper()">دخول</button>
-  <button class="btn btn-secondary" onclick="closeLoginModal()">إلغاء</button>
-</div>
+<!-- Footer -->
+<footer class="footer mt-5 p-3 text-center">
+  <p id="policyText" style="cursor:pointer;">سياسة الاستخدام</p>
+  <p>© 2026 HEX Store – All rights reserved | <a href="#">إخلاء المسؤولية</a></p>
+</footer>
 
 <!-- لوحة المطور المخفية -->
 <div id="adminPanel">
   <h4>لوحة المطور المخفية</h4>
-  <p>إضافة تطبيق جديد:</p>
+  <p>إضافة/تعديل/حذف التطبيقات:</p>
   <input type="text" id="appName" placeholder="اسم التطبيق" class="form-control mb-2">
   <textarea id="appDesc" placeholder="وصف التطبيق" class="form-control mb-2"></textarea>
   <input type="text" id="appLink" placeholder="رابط التطبيق أو اسم الملف" class="form-control mb-2">
   <input type="text" id="appImage" placeholder="رابط صورة التطبيق (اختياري)" class="form-control mb-2">
+  <input type="text" id="appVersion" placeholder="الإصدار" class="form-control mb-2">
   <select id="appPlatform" class="form-control mb-2">
     <option value="Android">Android</option>
     <option value="Windows">Windows</option>
@@ -85,43 +78,26 @@ body { background: #111; color: #fff; }
     <option>التخصيص</option><option>هندسة</option>
     <option>المرافق</option><option>أنظمة التشغيل</option>
   </select>
-  <button class="btn btn-success" onclick="addApp()">رفع التطبيق</button>
+  <button class="btn btn-success mb-2" onclick="addApp()">رفع التطبيق</button>
+  <hr>
+  <h5>التطبيقات المضافة</h5>
+  <div id="appList"></div>
 </div>
 
-<!-- Footer -->
-<footer class="footer mt-5 p-3">
-  <div class="container text-center">
-    <p>© 2026 HEX Store – All rights reserved | <a href="#">سياسة الاستخدام</a> | <a href="#">إخلاء المسؤولية</a></p>
-  </div>
-</footer>
-
 <script>
-let apps = []; // مصفوفة تخزين التطبيقات
+let apps = [];
+let clickCount = 0;
 
-// عرض لوحة تسجيل الدخول
-function showLoginModal() {
-  document.getElementById("loginModal").style.display = "block";
-}
-
-// إخفاء تسجيل الدخول
-function closeLoginModal() {
-  document.getElementById("loginModal").style.display = "none";
-}
-
-// تسجيل دخول المطور
-function loginDeveloper() {
-  let user = document.getElementById("username").value;
-  let pass = document.getElementById("password").value;
-  if(user === "23" && pass === "23"){
-    document.getElementById("loginModal").style.display = "none";
+// عند الضغط 5 مرات على سياسة الاستخدام تظهر لوحة المطور
+document.getElementById("policyText").addEventListener("click", () => {
+  clickCount++;
+  if(clickCount >= 5) {
     document.getElementById("adminPanel").style.display = "block";
-    alert("تم تسجيل الدخول! لوحة المطور جاهزة");
-  } else {
-    alert("اسم المستخدم أو كلمة المرور خاطئة");
+    alert("تم فتح لوحة المطور!");
   }
-}
+});
 
-// إضافة تطبيق جديد
+// إضافة تطبيق
 function addApp() {
   let name = document.getElementById("appName").value;
   let desc = document.getElementById("appDesc").value;
@@ -129,21 +105,23 @@ function addApp() {
   let image = document.getElementById("appImage").value;
   let platform = document.getElementById("appPlatform").value;
   let category = document.getElementById("appCategory").value;
+  let version = document.getElementById("appVersion").value;
 
   if(!name || !desc || !link) { alert("الرجاء تعبئة جميع الحقول الأساسية"); return; }
 
-  apps.push({name, desc, link, image, platform, category});
-  alert("تم إضافة التطبيق وسيظهر فورًا");
+  let app = {name, desc, link, image, platform, category, version};
+  apps.push(app);
   renderApps();
+  renderAdminList();
 }
 
-// عرض التطبيقات
+// عرض التطبيقات على الصفحة
 function renderApps(filter=null) {
   let container = document.getElementById("appsContainer");
   container.innerHTML = "";
-  let displayApps = filter ? apps.filter(a => a.category === filter || a.platform === filter) : apps;
+  let displayApps = filter ? apps.filter(a => a.category===filter || a.platform===filter) : apps;
 
-  displayApps.forEach(app => {
+  displayApps.forEach((app, index) => {
     container.innerHTML += `
       <div class="col-md-3 mb-3">
         <div class="card">
@@ -151,13 +129,34 @@ function renderApps(filter=null) {
           <div class="card-body">
             <h5>${app.name}</h5>
             <p>${app.desc}</p>
-            <p><strong>${app.platform}</strong> | ${app.category}</p>
+            <p><strong>${app.platform}</strong> | ${app.category} | ${app.version}</p>
             <a href="${app.link}" class="btn download-btn" target="_blank">تنزيل</a>
           </div>
         </div>
       </div>
     `;
   });
+}
+
+// عرض قائمة التطبيقات في لوحة المطور مع زر حذف
+function renderAdminList() {
+  let container = document.getElementById("appList");
+  container.innerHTML = "";
+  apps.forEach((app,index) => {
+    container.innerHTML += `
+      <div class="border p-2 mb-2">
+        <b>${app.name}</b> (${app.platform} | ${app.category} | ${app.version})
+        <button class="btn btn-sm btn-danger float-end" onclick="deleteApp(${index})">حذف</button>
+      </div>
+    `;
+  });
+}
+
+// حذف تطبيق
+function deleteApp(index) {
+  apps.splice(index,1);
+  renderApps();
+  renderAdminList();
 }
 
 // تصفية حسب الفئة
