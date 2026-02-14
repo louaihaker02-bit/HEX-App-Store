@@ -6,15 +6,17 @@
 <title>HEX App Store</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <style>
-body { background: #111; color: #fff; }
+body { background: #111; color: #fff; font-family: Arial, sans-serif; }
 .navbar, .footer { background: #222; }
-.card { background: #1a1a1a; color: #fff; }
-.app-image { width: 100%; height: 150px; object-fit: cover; }
+.card { background: #1a1a1a; color: #fff; border-radius: 10px; }
+.app-image { width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
 .download-btn { background-color: #28a745; color: #fff; }
-.section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; }
-.section-box:hover { background: #444; }
+.section-box { background: #222; padding: 20px; margin: 5px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.3s; }
+.section-box:hover { background: #444; transform: scale(1.05); }
 #appsContainer { margin-top: 20px; }
 #adminPanel { display: none; background: #333; padding: 20px; border-radius: 10px; margin-top: 20px; }
+.comment-box, .report-box { margin-top: 5px; }
+.star { color: gold; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -60,10 +62,11 @@ body { background: #111; color: #fff; }
 <!-- لوحة المطور المخفية -->
 <div id="adminPanel">
   <h4>لوحة المطور المخفية</h4>
-  <p>إضافة/تعديل/حذف التطبيقات:</p>
+  <p>إضافة/تعديل/حذف التطبيقات وإدارة البلاغات:</p>
+  <input type="file" id="appFile" class="form-control mb-2">
+  <input type="text" id="appLink" placeholder="رابط التطبيق (اختياري)" class="form-control mb-2">
   <input type="text" id="appName" placeholder="اسم التطبيق" class="form-control mb-2">
   <textarea id="appDesc" placeholder="وصف التطبيق" class="form-control mb-2"></textarea>
-  <input type="text" id="appLink" placeholder="رابط التطبيق أو اسم الملف" class="form-control mb-2">
   <input type="text" id="appImage" placeholder="رابط صورة التطبيق (اختياري)" class="form-control mb-2">
   <input type="text" id="appVersion" placeholder="الإصدار" class="form-control mb-2">
   <select id="appPlatform" class="form-control mb-2">
@@ -82,16 +85,20 @@ body { background: #111; color: #fff; }
   <hr>
   <h5>التطبيقات المضافة</h5>
   <div id="appList"></div>
+  <hr>
+  <h5>البلاغات</h5>
+  <div id="reportsList"></div>
 </div>
 
 <script>
 let apps = [];
+let reports = [];
 let clickCount = 0;
 
-// عند الضغط 5 مرات على سياسة الاستخدام تظهر لوحة المطور
+// فتح لوحة المطور بعد 5 ضغطات
 document.getElementById("policyText").addEventListener("click", () => {
   clickCount++;
-  if(clickCount >= 5) {
+  if(clickCount >=5) {
     document.getElementById("adminPanel").style.display = "block";
     alert("تم فتح لوحة المطور!");
   }
@@ -106,43 +113,90 @@ function addApp() {
   let platform = document.getElementById("appPlatform").value;
   let category = document.getElementById("appCategory").value;
   let version = document.getElementById("appVersion").value;
+  let fileInput = document.getElementById("appFile");
 
-  if(!name || !desc || !link) { alert("الرجاء تعبئة جميع الحقول الأساسية"); return; }
+  if(!name || !desc || (!link && !fileInput.files[0])) { alert("الرجاء تعبئة الحقول الأساسية أو رفع ملف"); return; }
 
-  let app = {name, desc, link, image, platform, category, version};
+  let fileName = fileInput.files[0] ? fileInput.files[0].name : null;
+  let app = {name, desc, link:fileName || link, image, platform, category, version, comments: [], rating:0};
   apps.push(app);
   renderApps();
   renderAdminList();
 }
 
-// عرض التطبيقات على الصفحة
+// عرض التطبيقات
 function renderApps(filter=null) {
   let container = document.getElementById("appsContainer");
   container.innerHTML = "";
   let displayApps = filter ? apps.filter(a => a.category===filter || a.platform===filter) : apps;
-
-  displayApps.forEach((app, index) => {
+  
+  displayApps.forEach((app,index)=>{
+    let stars = "";
+    for(let i=1;i<=5;i++){
+      stars += `<span class="star" onclick="rateApp(${index},${i})">&#9733;</span>`;
+    }
+    let commentsHTML = app.comments.map(c=>`<div>${c}</div>`).join("");
     container.innerHTML += `
-      <div class="col-md-3 mb-3">
-        <div class="card">
-          ${app.image ? `<img src="${app.image}" class="app-image">` : ""}
-          <div class="card-body">
-            <h5>${app.name}</h5>
-            <p>${app.desc}</p>
-            <p><strong>${app.platform}</strong> | ${app.category} | ${app.version}</p>
-            <a href="${app.link}" class="btn download-btn" target="_blank">تنزيل</a>
+    <div class="col-md-3 mb-3">
+      <div class="card">
+        ${app.image?`<img src="${app.image}" class="app-image">`:""}
+        <div class="card-body">
+          <h5>${app.name}</h5>
+          <p>${app.desc}</p>
+          <p><strong>${app.platform}</strong> | ${app.category} | ${app.version}</p>
+          <div>${stars}</div>
+          <a href="${app.link}" class="btn download-btn mt-2" target="_blank">تنزيل</a>
+          <div class="comment-box mt-2">
+            <input type="text" id="comment${index}" placeholder="تعليق..." class="form-control mb-1">
+            <button class="btn btn-sm btn-primary" onclick="addComment(${index})">أضف تعليق</button>
           </div>
+          <div id="commentsList${index}">${commentsHTML}</div>
+          <button class="btn btn-sm btn-warning mt-1" onclick="reportApp(${index})">الإبلاغ عن التطبيق</button>
         </div>
       </div>
+    </div>
     `;
   });
 }
 
-// عرض قائمة التطبيقات في لوحة المطور مع زر حذف
-function renderAdminList() {
+// التعليقات
+function addComment(index){
+  let commentInput = document.getElementById(`comment${index}`);
+  let text = commentInput.value.trim();
+  if(text) {
+    apps[index].comments.push(text);
+    renderApps();
+  }
+}
+
+// التقييم
+function rateApp(index, stars){
+  apps[index].rating = stars;
+  renderApps();
+}
+
+// الإبلاغ
+function reportApp(index){
+  let app = apps[index];
+  reports.push({name: app.name, platform: app.platform, category: app.category});
+  alert("تم إرسال البلاغ!");
+  renderReports();
+}
+
+// عرض البلاغات في لوحة المطور
+function renderReports(){
+  let container = document.getElementById("reportsList");
+  container.innerHTML = "";
+  reports.forEach((r,i)=>{
+    container.innerHTML += `<div class="border p-2 mb-2">#${i+1} ${r.name} (${r.platform} | ${r.category})</div>`;
+  });
+}
+
+// قائمة التطبيقات في لوحة المطور
+function renderAdminList(){
   let container = document.getElementById("appList");
   container.innerHTML = "";
-  apps.forEach((app,index) => {
+  apps.forEach((app,index)=>{
     container.innerHTML += `
       <div class="border p-2 mb-2">
         <b>${app.name}</b> (${app.platform} | ${app.category} | ${app.version})
@@ -153,28 +207,25 @@ function renderAdminList() {
 }
 
 // حذف تطبيق
-function deleteApp(index) {
+function deleteApp(index){
   apps.splice(index,1);
   renderApps();
   renderAdminList();
+  renderReports();
 }
 
-// تصفية حسب الفئة
-function filterCategory(category) {
+// تصفية
+function filterCategory(category){
   renderApps(category);
 }
 
-// بحث التطبيق
-function searchApp() {
+// البحث
+function searchApp(){
   let query = document.getElementById("searchInput").value.trim().toLowerCase();
-  if(query === "hex app store") {
-    window.location.href = window.location.origin;
-  } else {
-    alert("لم يتم العثور على التطبيق");
-  }
+  if(query === "hex app store"){ window.location.href = window.location.origin; }
+  else{ alert("لم يتم العثور على التطبيق"); }
 }
 
-// عرض كل التطبيقات افتراضياً
 renderApps();
 </script>
 
