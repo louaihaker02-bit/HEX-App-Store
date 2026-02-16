@@ -3,205 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>متجر التطبيقات مع Firebase Storage</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+<title>HEX App Store</title>
 <style>
-body { font-family: Arial; margin:0; padding:0; background:#f0f2f5; }
-header { background:#1e90ff; color:white; padding:15px; text-align:center; }
-h1 { margin:0; font-size:28px; }
-nav { display:flex; flex-wrap:wrap; background:#0b5ed7; padding:10px; }
-nav button { margin:5px; padding:8px 12px; background:#1e90ff; border:none; color:white; cursor:pointer; border-radius:4px; }
-nav button:hover { background:#084298; }
-#search { width:95%; padding:10px; margin:10px auto; display:block; border-radius:5px; border:1px solid #ccc; }
-.app-container { display:grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap:15px; padding:15px; }
-.app-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; flex-direction:column; }
-.app-card img { width:100%; height:150px; object-fit:cover; border-radius:5px; margin-bottom:10px; }
-.app-card h3 { margin:5px 0; color:#1e90ff; }
-.app-card p { flex:1; font-size:14px; color:#333; }
-button { margin-top:10px; padding:8px; border:none; color:white; border-radius:4px; cursor:pointer; }
-.downloadBtn { background:#28a745; }
-.downloadBtn:hover { background:#1e7e34; }
-.commentBtn { background:#17a2b8; }
-.commentBtn:hover { background:#117a8b; }
-input[type=text] { width:100%; padding:5px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
-form { background:white; padding:15px; margin:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:none; }
+body { font-family: Arial; background:#121212; color:#fff; margin:0; padding:0;}
+header{background:#1E1E1E; padding:20px;text-align:center;}
+button{padding:10px 20px;margin:5px; cursor:pointer;}
+.card{background:#222; padding:15px;margin:10px; border-radius:8px; display:inline-block; width:200px;}
+.card img{width:100%; border-radius:5px;}
+#appsContainer{display:flex; flex-wrap:wrap; justify-content:center;}
 </style>
 </head>
 <body>
 
-<header><h1>متجر التطبيقات المتقدم</h1></header>
+<header>
+<h1>HEX App Store</h1>
+<p>مرحبا بك في متجر التطبيقات</p>
+</header>
 
-<nav>
-<button onclick="filterApps('All')">الكل</button>
-<button onclick="filterApps('Android')">أندرويد</button>
-<button onclick="filterApps('Windows')">ويندوز</button>
-</nav>
+<section id="publishAppSection" style="text-align:center; margin:20px;">
+<h2>نشر تطبيق جديد</h2>
+<input type="text" id="appName" placeholder="اسم التطبيق"><br>
+<input type="text" id="appDesc" placeholder="وصف التطبيق"><br>
+<input type="text" id="appPlatform" placeholder="Android / Windows"><br>
+<input type="text" id="appCategory" placeholder="فئة التطبيق (مثل حماية)"><br>
+<input type="text" id="appImage" placeholder="رابط الصورة"><br>
+<input type="text" id="appLink" placeholder="رابط التحميل"><br>
+<button onclick="publishApp()">نشر التطبيق</button>
+</section>
 
-<input type="text" id="search" placeholder="ابحث عن تطبيق..." onkeyup="searchApps()">
+<hr>
 
-<div class="app-container" id="appList"></div>
+<section id="appsContainer">
+<!-- التطبيقات ستظهر هنا -->
+</section>
 
-<!-- لوحة المطور -->
-<form id="adminPanel">
-<h2>لوحة المطور</h2>
-<input type="text" id="appName" placeholder="اسم التطبيق" required>
-<input type="text" id="appDesc" placeholder="وصف التطبيق" required>
-<select id="appType">
-<option value="Android">أندرويد</option>
-<option value="Windows">ويندوز</option>
-</select>
-<select id="appService">
-<option value="حماية">الحماية</option>
-<option value="إنتاجية">الإنتاجية</option>
-<option value="ألعاب">الألعاب</option>
-<option value="تصوير">التصوير</option>
-<option value="صوت وفيديو">الصوت والفيديو</option>
-</select>
-<input type="file" id="appImageFile" accept="image/*">
-<input type="file" id="appDownloadFile" accept=".exe,.apk,.zip,.iso">
-<input type="text" id="appDownloadLink" placeholder="أو رابط تنزيل خارجي">
-<button type="submit">إضافة التطبيق</button>
-</form>
+<script type="module">
+// ================== Supabase Setup ==================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-<footer id="privacyBtn">
-<p>© 2026 متجر التطبيقات – جميع الحقوق محفوظة</p>
-<p>سياسة الخصوصية | شروط الاستخدام</p>
-</footer>
+const SUPABASE_URL="https://iwgmnfuxxomwtwmkfzjn.supabase.co";
+const SUPABASE_KEY="sb_publishable_HasRVGxmcFaYhgqv1IMWhA_huNgIfiJ";
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 
-<script>
-// ==================== Firebase ======================
-const firebaseConfig = {
-  apiKey: "AIzaSyAZR1ZFC0zaZOeyMH5baEDJZqVPLOLatp8",
-  authDomain: "studio-4353055608-666e6.firebaseapp.com",
-  projectId: "studio-4353055608-666e6",
-  storageBucket: "studio-4353055608-666e6.appspot.com",
-  messagingSenderId: "249229943359",
-  appId: "1:249229943359:web:edff2e7c577fb4dcb30e8a"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
+// ================== نشر التطبيقات ==================
+async function publishApp(){
+    const name = document.getElementById("appName").value;
+    const desc = document.getElementById("appDesc").value;
+    const platform = document.getElementById("appPlatform").value;
+    const category = document.getElementById("appCategory").value;
+    const image = document.getElementById("appImage").value;
+    const link = document.getElementById("appLink").value;
 
-// ==================== الوظائف ======================
-const appList = document.getElementById('appList');
-const adminPanel = document.getElementById('adminPanel');
-let clickCount=0;
-let appImageFile = null;
-let appDownloadFile = null;
+    if(!name || !desc || !platform || !category || !link){
+        alert("يرجى ملء جميع الحقول المطلوبة!");
+        return;
+    }
 
-// إظهار لوحة المطور بعد 5 نقرات
-document.getElementById('privacyBtn').addEventListener('click', ()=>{
-  clickCount++;
-  if(clickCount>=5) adminPanel.style.display='block';
-});
+    const { data, error } = await supabase
+        .from('apps')
+        .insert([{ name, desc, platform, category, image, link, created_at: new Date() }]);
 
-// قراءة الملفات
-document.getElementById('appImageFile').addEventListener('change', e=>{
-  appImageFile = e.target.files[0];
-});
-document.getElementById('appDownloadFile').addEventListener('change', e=>{
-  appDownloadFile = e.target.files[0];
-});
-
-// إضافة التطبيق
-adminPanel.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const name = document.getElementById('appName').value;
-  const desc = document.getElementById('appDesc').value;
-  const type = document.getElementById('appType').value;
-  const service = document.getElementById('appService').value;
-  const downloadLinkInput = document.getElementById('appDownloadLink').value;
-
-  if(!appImageFile){ alert('اختر صورة للتطبيق'); return; }
-  if(!appDownloadFile && !downloadLinkInput){ alert('اختر ملف التطبيق أو رابط خارجي'); return; }
-
-  // رفع الصورة إلى Firebase Storage
-  const imgRef = storage.ref().child(`images/${Date.now()}_${appImageFile.name}`);
-  const imgSnapshot = await imgRef.put(appImageFile);
-  const imgURL = await imgSnapshot.ref.getDownloadURL();
-
-  let fileURL = downloadLinkInput || null;
-  if(appDownloadFile){
-    const fileRef = storage.ref().child(`files/${Date.now()}_${appDownloadFile.name}`);
-    const fileSnapshot = await fileRef.put(appDownloadFile);
-    fileURL = await fileSnapshot.ref.getDownloadURL();
-  }
-
-  // حفظ التطبيق في Firestore
-  await db.collection("apps").add({
-    name, desc, type, service,
-    img: imgURL,
-    downloadLink: fileURL,
-    comments: [],
-    rating: 0
-  });
-
-  e.target.reset();
-  appImageFile=null; appDownloadFile=null;
-});
-
-// عرض التطبيقات
-function displayApps(snapshot){
-  appList.innerHTML="";
-  snapshot.forEach(doc=>{
-    const a = doc.data();
-    const id = doc.id;
-    const div=document.createElement('div');
-    div.className='app-card';
-    const link = a.downloadLink;
-    div.innerHTML=`
-      <img src="${a.img}" alt="${a.name}">
-      <h3>${a.name} (${a.service})</h3>
-      <p>${a.desc}</p>
-      <a href="${link}" download="${a.name}"><button class="downloadBtn">تحميل</button></a>
-      <div>
-        <input type="text" id="commentInput${id}" placeholder="اكتب تعليقك هنا">
-        <button class="commentBtn" onclick="addComment('${id}')">أضف تعليق</button>
-      </div>
-      <div id="comments${id}">${(a.comments||[]).map(c=>'<p>'+c+'</p>').join('')}</div>
-    `;
-    appList.appendChild(div);
-  });
+    if(error){
+        alert("حدث خطأ أثناء نشر التطبيق: " + error.message);
+    } else {
+        alert("تم نشر التطبيق بنجاح!");
+        loadApps();
+        document.getElementById("appName").value="";
+        document.getElementById("appDesc").value="";
+        document.getElementById("appPlatform").value="";
+        document.getElementById("appCategory").value="";
+        document.getElementById("appImage").value="";
+        document.getElementById("appLink").value="";
+    }
 }
 
-// إضافة تعليق
-function addComment(id){
-  const input = document.getElementById(`commentInput${id}`);
-  const comment = input.value.trim();
-  if(comment==="") return;
-  const docRef = db.collection("apps").doc(id);
-  docRef.get().then(doc=>{
-    const comments = doc.data().comments || [];
-    comments.push(comment);
-    docRef.update({comments});
-  });
-  input.value="";
-}
+// ================== عرض التطبيقات ==================
+async function loadApps(){
+    const { data: apps, error } = await supabase
+        .from('apps')
+        .select('*')
+        .order('created_at', { ascending:false });
 
-// متابعة أي تغييرات في Firebase
-db.collection("apps").onSnapshot(snapshot=>{
-  displayApps(snapshot);
-});
+    if(error){
+        console.log("خطأ في تحميل التطبيقات:", error.message);
+        return;
+    }
 
-// البحث
-function searchApps(){
-  const keyword=document.getElementById('search').value.toLowerCase();
-  db.collection("apps").get().then(snapshot=>{
-    const filtered = snapshot.docs.filter(doc=>{
-      const a = doc.data();
-      return a.name.toLowerCase().includes(keyword) || a.desc.toLowerCase().includes(keyword);
+    const container = document.getElementById("appsContainer");
+    container.innerHTML="";
+
+    apps.forEach(app=>{
+        const card = document.createElement("div");
+        card.className="card";
+        card.innerHTML=`
+            <img src="${app.image || 'https://via.placeholder.com/150'}">
+            <h3>${app.name}</h3>
+            <p>${app.desc}</p>
+            <p>منصة: ${app.platform}</p>
+            <p>فئة: ${app.category}</p>
+            <a href="${app.link}" target="_blank"><button style="background:green;color:white;">تنزيل</button></a>
+        `;
+        container.appendChild(card);
     });
-    displayApps({forEach: f => filtered.forEach(f)});
-  });
 }
 
-// تصفية الأقسام
-function filterApps(type){
-  if(type==='All') db.collection("apps").get().then(snapshot=>displayApps(snapshot));
-  else db.collection("apps").where("type","==",type).get().then(snapshot=>displayApps(snapshot));
-}
+// ================== تحميل التطبيقات عند فتح الصفحة ==================
+loadApps();
+
 </script>
 
 </body>
