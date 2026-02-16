@@ -4,96 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HEX App Store</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-body { font-family: Arial; background:#121212; color:#fff; margin:0; padding:0;}
+body { margin:0; font-family: Arial; background:#121212; color:#fff;}
 header{background:#1E1E1E; padding:20px;text-align:center;}
-button{padding:10px 20px;margin:5px; cursor:pointer;}
-.card{background:#222; padding:15px;margin:10px; border-radius:8px; display:inline-block; width:200px;}
+button{padding:10px 15px;margin:5px; cursor:pointer;border:none;border-radius:5px;}
+.card{background:#222; padding:15px;margin:10px; border-radius:10px; display:inline-block; width:220px; vertical-align:top;}
 .card img{width:100%; border-radius:5px;}
 #appsContainer{display:flex; flex-wrap:wrap; justify-content:center;}
+footer{background:#1E1E1E; padding:20px; text-align:center; font-size:14px; margin-top:30px;}
+.modal{display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center;}
+.modal-content{background:#222; padding:20px; border-radius:10px; width:90%; max-width:500px;}
+input, select{width:90%; padding:8px; margin:5px 0; border-radius:5px; border:none;}
 </style>
 </head>
 <body>
 
 <header>
 <h1>HEX App Store</h1>
-<p>مرحبا بك في متجر التطبيقات</p>
+<p>متجر التطبيقات العربي</p>
 </header>
 
-<section id="publishAppSection" style="text-align:center; margin:20px;">
-<h2>نشر تطبيق جديد</h2>
-<input type="text" id="appName" placeholder="اسم التطبيق"><br>
-<input type="text" id="appDesc" placeholder="وصف التطبيق"><br>
-<input type="text" id="appPlatform" placeholder="Android / Windows"><br>
-<input type="text" id="appCategory" placeholder="فئة التطبيق (مثل حماية)"><br>
-<input type="text" id="appImage" placeholder="رابط الصورة"><br>
-<input type="text" id="appLink" placeholder="رابط التحميل"><br>
-<button onclick="publishApp()">نشر التطبيق</button>
+<section style="text-align:center; margin:20px;">
+<h2>التطبيقات</h2>
+<div id="appsContainer"></div>
 </section>
 
-<hr>
+<footer>
+<div id="footerLinks">
+<button id="policyBtn">سياسة الاستخدام</button>
+<button onclick="alert('إخلاء المسؤولية')">إخلاء المسؤولية</button>
+<button onclick="alert('انشر تطبيق')">انشر تطبيق</button>
+</div>
+<p>© 2026 HEX Store – جميع الحقوق محفوظة</p>
+</footer>
 
-<section id="appsContainer">
-<!-- التطبيقات ستظهر هنا -->
-</section>
+<!-- Modal نشر تطبيق -->
+<div id="publishModal" class="modal">
+<div class="modal-content">
+<h3>نشر تطبيق جديد</h3>
+<input type="text" id="appName" placeholder="اسم التطبيق">
+<input type="text" id="appDesc" placeholder="وصف التطبيق">
+<select id="appPlatform">
+<option value="">اختر المنصة</option>
+<option value="Android">Android</option>
+<option value="Windows">Windows</option>
+</select>
+<select id="appCategory">
+<option value="">اختر الفئة</option>
+<option value="حماية">حماية</option>
+<option value="إنتاجية">إنتاجية</option>
+<option value="صوت وفيديو">صوت وفيديو</option>
+<option value="تصوير فوتوغرافي">تصوير فوتوغرافي</option>
+<option value="أدوات الألعاب">أدوات الألعاب</option>
+<option value="التواصل">التواصل</option>
+<option value="تخصيص">تخصيص</option>
+<option value="هندسة">هندسة</option>
+</select>
+<input type="text" id="appLink" placeholder="رابط التنزيل أو رابط خارجي">
+<input type="file" id="appFile">
+<input type="file" id="appImage">
+<button onclick="submitApp()">إرسال للنشر</button>
+<button onclick="closeModal()">إلغاء</button>
+</div>
+</div>
+
+<!-- لوحة المطور مخفية -->
+<div id="adminPanel" class="modal">
+<div class="modal-content">
+<h3>لوحة المطور</h3>
+<div id="adminApps"></div>
+<button onclick="closeAdmin()">إغلاق</button>
+</div>
+</div>
 
 <script type="module">
-// ================== Supabase Setup ==================
+// ============ إعداد Supabase ===========
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
 const SUPABASE_URL="https://iwgmnfuxxomwtwmkfzjn.supabase.co";
 const SUPABASE_KEY="sb_publishable_HasRVGxmcFaYhgqv1IMWhA_huNgIfiJ";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 
-// ================== نشر التطبيقات ==================
-async function publishApp(){
-    const name = document.getElementById("appName").value;
-    const desc = document.getElementById("appDesc").value;
-    const platform = document.getElementById("appPlatform").value;
-    const category = document.getElementById("appCategory").value;
-    const image = document.getElementById("appImage").value;
-    const link = document.getElementById("appLink").value;
-
-    if(!name || !desc || !platform || !category || !link){
-        alert("يرجى ملء جميع الحقول المطلوبة!");
-        return;
+// ================== عداد الضغط على سياسة الاستخدام لفتح لوحة المطور ==========
+let policyClicks=0;
+document.getElementById("policyBtn").addEventListener("click",()=>{
+    policyClicks++;
+    if(policyClicks>=5){
+        openAdminPanel();
+        policyClicks=0;
     }
-
-    const { data, error } = await supabase
-        .from('apps')
-        .insert([{ name, desc, platform, category, image, link, created_at: new Date() }]);
-
-    if(error){
-        alert("حدث خطأ أثناء نشر التطبيق: " + error.message);
-    } else {
-        alert("تم نشر التطبيق بنجاح!");
-        loadApps();
-        document.getElementById("appName").value="";
-        document.getElementById("appDesc").value="";
-        document.getElementById("appPlatform").value="";
-        document.getElementById("appCategory").value="";
-        document.getElementById("appImage").value="";
-        document.getElementById("appLink").value="";
-    }
-}
+});
 
 // ================== عرض التطبيقات ==================
 async function loadApps(){
-    const { data: apps, error } = await supabase
-        .from('apps')
-        .select('*')
-        .order('created_at', { ascending:false });
-
-    if(error){
-        console.log("خطأ في تحميل التطبيقات:", error.message);
-        return;
-    }
-
+    const { data: apps, error } = await supabase.from('apps').select('*').order('created_at',{ascending:false});
     const container = document.getElementById("appsContainer");
     container.innerHTML="";
-
     apps.forEach(app=>{
-        const card = document.createElement("div");
+        const card=document.createElement("div");
         card.className="card";
         card.innerHTML=`
             <img src="${app.image || 'https://via.placeholder.com/150'}">
@@ -106,10 +114,66 @@ async function loadApps(){
         container.appendChild(card);
     });
 }
-
-// ================== تحميل التطبيقات عند فتح الصفحة ==================
 loadApps();
 
+// ================== فتح وغلق النوافذ ==========
+function showPublishModal(){ document.getElementById("publishModal").style.display="flex"; }
+function closeModal(){ document.getElementById("publishModal").style.display="none"; }
+function openAdminPanel(){ document.getElementById("adminPanel").style.display="flex"; loadAdminApps();}
+function closeAdmin(){ document.getElementById("adminPanel").style.display="none"; }
+
+// ================== إرسال التطبيق ==========
+async function submitApp(){
+    const name=document.getElementById("appName").value;
+    const desc=document.getElementById("appDesc").value;
+    const platform=document.getElementById("appPlatform").value;
+    const category=document.getElementById("appCategory").value;
+    const link=document.getElementById("appLink").value;
+    const file=document.getElementById("appFile").files[0];
+    const image=document.getElementById("appImage").files[0];
+
+    if(!name || !desc || !platform || !category || !link){
+        alert("يرجى ملء جميع الحقول!");
+        return;
+    }
+
+    // رفع الملفات إلى Supabase Storage
+    let imageURL="", fileURL="";
+    if(image){
+        const { data, error } = await supabase.storage.from('app-images').upload(`${Date.now()}-${image.name}`,image);
+        imageURL = supabase.storage.from('app-images').getPublicUrl(data.path).publicUrl;
+    }
+    if(file){
+        const { data, error } = await supabase.storage.from('app-files').upload(`${Date.now()}-${file.name}`,file);
+        fileURL = supabase.storage.from('app-files').getPublicUrl(data.path).publicUrl;
+    }
+
+    await supabase.from('apps').insert([{name,desc,platform,category,link:fileURL||link,image:imageURL,created_at:new Date()}]);
+    alert("تم إرسال التطبيق للمراجعة");
+    closeModal();
+    loadApps();
+}
+
+// ================== لوحة المطور ==================
+async function loadAdminApps(){
+    const { data: apps } = await supabase.from('apps').select('*').order('created_at',{ascending:false});
+    const adminDiv = document.getElementById("adminApps");
+    adminDiv.innerHTML="";
+    apps.forEach(app=>{
+        const div=document.createElement("div");
+        div.style.background="#333"; div.style.padding="10px"; div.style.margin="10px"; div.style.borderRadius="5px";
+        div.innerHTML=`
+            <h4>${app.name}</h4>
+            <button onclick="acceptApp('${app.id}')">قبول</button>
+            <button onclick="rejectApp('${app.id}')">رفض</button>
+            <button onclick="deleteApp('${app.id}')">حذف</button>
+        `;
+        adminDiv.appendChild(div);
+    });
+}
+async function acceptApp(id){ alert("تم قبول التطبيق!"); /* يمكن اضافة إشعار بالبريد هنا */ }
+async function rejectApp(id){ alert("تم رفض التطبيق!"); }
+async function deleteApp(id){ await supabase.from('apps').delete().eq('id',id); loadApps(); loadAdminApps();}
 </script>
 
 </body>
