@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HEX App Store</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 body { margin:0; font-family: Arial; background:#121212; color:#fff;}
 header{background:#1E1E1E; padding:20px;text-align:center;}
@@ -15,7 +14,7 @@ button{padding:10px 15px;margin:5px; cursor:pointer;border:none;border-radius:5p
 footer{background:#1E1E1E; padding:20px; text-align:center; font-size:14px; margin-top:30px;}
 .modal{display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center;}
 .modal-content{background:#222; padding:20px; border-radius:10px; width:90%; max-width:500px;}
-input, select{width:90%; padding:8px; margin:5px 0; border-radius:5px; border:none;}
+input, select{width:90%; padding:8px; margin:5px 0; border-radius:5px; border:none; background:#333; color:#fff;}
 </style>
 </head>
 <body>
@@ -34,7 +33,7 @@ input, select{width:90%; padding:8px; margin:5px 0; border-radius:5px; border:no
 <div id="footerLinks">
 <button id="policyBtn">سياسة الاستخدام</button>
 <button onclick="alert('إخلاء المسؤولية')">إخلاء المسؤولية</button>
-<button onclick="alert('انشر تطبيق')">انشر تطبيق</button>
+<button onclick="showPublishModal()">انشر تطبيق</button>
 </div>
 <p>© 2026 HEX Store – جميع الحقوق محفوظة</p>
 </footer>
@@ -62,7 +61,6 @@ input, select{width:90%; padding:8px; margin:5px 0; border-radius:5px; border:no
 <option value="هندسة">هندسة</option>
 </select>
 <input type="text" id="appLink" placeholder="رابط التنزيل أو رابط خارجي">
-<input type="file" id="appFile">
 <input type="file" id="appImage">
 <button onclick="submitApp()">إرسال للنشر</button>
 <button onclick="closeModal()">إلغاء</button>
@@ -97,7 +95,7 @@ document.getElementById("policyBtn").addEventListener("click",()=>{
 
 // ================== عرض التطبيقات ==================
 async function loadApps(){
-    const { data: apps, error } = await supabase.from('apps').select('*').order('created_at',{ascending:false});
+    const { data: apps } = await supabase.from('apps').select('*').order('created_at',{ascending:false});
     const container = document.getElementById("appsContainer");
     container.innerHTML="";
     apps.forEach(app=>{
@@ -129,7 +127,6 @@ async function submitApp(){
     const platform=document.getElementById("appPlatform").value;
     const category=document.getElementById("appCategory").value;
     const link=document.getElementById("appLink").value;
-    const file=document.getElementById("appFile").files[0];
     const image=document.getElementById("appImage").files[0];
 
     if(!name || !desc || !platform || !category || !link){
@@ -137,18 +134,14 @@ async function submitApp(){
         return;
     }
 
-    // رفع الملفات إلى Supabase Storage
-    let imageURL="", fileURL="";
+    // رفع الصورة إلى Supabase Storage
+    let imageURL="";
     if(image){
         const { data, error } = await supabase.storage.from('app-images').upload(`${Date.now()}-${image.name}`,image);
         imageURL = supabase.storage.from('app-images').getPublicUrl(data.path).publicUrl;
     }
-    if(file){
-        const { data, error } = await supabase.storage.from('app-files').upload(`${Date.now()}-${file.name}`,file);
-        fileURL = supabase.storage.from('app-files').getPublicUrl(data.path).publicUrl;
-    }
 
-    await supabase.from('apps').insert([{name,desc,platform,category,link:fileURL||link,image:imageURL,created_at:new Date()}]);
+    await supabase.from('apps').insert([{name,desc,platform,category,link,image:imageURL,created_at:new Date()}]);
     alert("تم إرسال التطبيق للمراجعة");
     closeModal();
     loadApps();
@@ -171,7 +164,7 @@ async function loadAdminApps(){
         adminDiv.appendChild(div);
     });
 }
-async function acceptApp(id){ alert("تم قبول التطبيق!"); /* يمكن اضافة إشعار بالبريد هنا */ }
+async function acceptApp(id){ alert("تم قبول التطبيق!"); loadApps();}
 async function rejectApp(id){ alert("تم رفض التطبيق!"); }
 async function deleteApp(id){ await supabase.from('apps').delete().eq('id',id); loadApps(); loadAdminApps();}
 </script>
